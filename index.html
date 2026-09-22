@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Password-protect PDF files locally in your browser with AES-256 encryption. Your PDF and password are never uploaded." />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; worker-src 'none';" />
+  <title>PDF Lock — Private PDF Encryption</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!--
+    These libraries are downloaded as application code only. The PDF and password
+    are never sent to them. Versions are pinned so updates cannot silently change
+    the app's behaviour.
+  -->
+  <script defer src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@pdfsmaller/pdf-encrypt@1.2.0/dist/pdf-encrypt.umd.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="PDF Lock home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <path d="M7 10V7a5 5 0 0 1 10 0v3" />
+            <rect x="5" y="10" width="14" height="11" rx="2" />
+            <path d="M12 14v3" />
+          </svg>
+        </span>
+        <span>PDF Lock</span>
+      </a>
+      <span class="header-pill">
+        <span class="status-dot" aria-hidden="true"></span>
+        Local processing
+      </span>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="eyebrow">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v5c0 5.1 3.4 8.8 8 10 4.6-1.2 8-4.9 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          Private by design
+        </div>
+        <h1 id="page-title">Password-protect a PDF without uploading it.</h1>
+        <p class="hero-copy">Your file is encrypted directly in this browser using AES-256. The PDF and the password you enter are never sent to a server.</p>
+      </section>
+
+      <section class="privacy-banner" aria-label="Privacy information">
+        <div class="privacy-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5.1 3.4 8.8 8 10 4.6-1.2 8-4.9 8-10V6l-8-3Z"/><path d="M9 12h6"/></svg>
+        </div>
+        <div>
+          <strong>Your document stays on this device</strong>
+          <p>There is no upload step, no account, no document storage and no analytics. Encryption happens in browser memory.</p>
+        </div>
+      </section>
+
+      <section class="app-card" aria-label="PDF encryption tool">
+        <div class="step">
+          <div class="step-heading">
+            <span class="step-number">1</span>
+            <div>
+              <h2>Choose a PDF</h2>
+              <p>Select one PDF from your device.</p>
+            </div>
+          </div>
+
+          <input id="file-input" class="visually-hidden" type="file" accept="application/pdf,.pdf" />
+          <button id="drop-zone" class="drop-zone" type="button">
+            <span class="drop-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
+            </span>
+            <span class="drop-title">Drop a PDF here</span>
+            <span class="drop-subtitle">or click to browse your files</span>
+          </button>
+
+          <div id="file-card" class="file-card" hidden>
+            <span class="file-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+            </span>
+            <span class="file-details">
+              <strong id="file-name"></strong>
+              <span id="file-size"></span>
+            </span>
+            <button id="remove-file" class="icon-button" type="button" aria-label="Remove selected file">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+          <p id="file-warning" class="inline-warning" hidden></p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="step">
+          <div class="step-heading">
+            <span class="step-number">2</span>
+            <div>
+              <h2>Set an opening password</h2>
+              <p>This password will be required whenever the protected PDF is opened.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label class="field" for="password">
+              <span>Password</span>
+              <span class="input-wrap">
+                <input id="password" type="password" autocomplete="new-password" spellcheck="false" placeholder="Enter a strong password" />
+                <button class="password-toggle" type="button" data-target="password" aria-label="Show password">
+                  <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+                  <svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.2A10 10 0 0 1 12 6c6.5 0 10 6 10 6a16 16 0 0 1-2.1 2.8M6.5 6.5C3.7 8.2 2 12 2 12s3.5 6 10 6a10 10 0 0 0 4.1-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                </button>
+              </span>
+            </label>
+
+            <div class="password-tools">
+              <div class="strength-row">
+                <span>Password strength</span>
+                <strong id="strength-label">Not set</strong>
+              </div>
+              <div class="strength-track" aria-hidden="true"><span id="strength-bar"></span></div>
+              <button id="generate-password" class="text-button" type="button">Generate strong password</button>
+            </div>
+
+            <label class="field" for="confirm-password">
+              <span>Confirm password</span>
+              <span class="input-wrap">
+                <input id="confirm-password" type="password" autocomplete="new-password" spellcheck="false" placeholder="Enter it again" />
+                <button class="password-toggle" type="button" data-target="confirm-password" aria-label="Show password confirmation">
+                  <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+                  <svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 6.2A10 10 0 0 1 12 6c6.5 0 10 6 10 6a16 16 0 0 1-2.1 2.8M6.5 6.5C3.7 8.2 2 12 2 12s3.5 6 10 6a10 10 0 0 0 4.1-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                </button>
+              </span>
+            </label>
+            <p id="password-match" class="field-message" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="action-area">
+          <div class="encryption-summary">
+            <span class="summary-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M12 14v3"/></svg>
+            </span>
+            <div>
+              <strong>AES-256 encryption</strong>
+              <span>Standard PDF password protection for modern PDF readers.</span>
+            </div>
+          </div>
+
+          <button id="encrypt-button" class="primary-button" type="button" disabled>
+            <span class="button-label">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="11" rx="2"/></svg>
+              Encrypt &amp; download
+            </span>
+            <span class="button-loading" hidden>
+              <span class="spinner" aria-hidden="true"></span>
+              Encrypting locally…
+            </span>
+          </button>
+
+          <div id="status-message" class="status-message" role="status" aria-live="polite" hidden></div>
+        </div>
+      </section>
+
+      <section class="details-grid" aria-label="How privacy works">
+        <article>
+          <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0"/><path d="M12 8v4l3 2"/></svg></span>
+          <h3>Processed locally</h3>
+          <p>The file stays in browser memory while it is being encrypted.</p>
+        </article>
+        <article>
+          <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="m7 9 5-5 5 5"/><path d="M12 4v12"/></svg></span>
+          <h3>No document upload</h3>
+          <p>The app contains no endpoint that receives your PDF or password.</p>
+        </article>
+        <article>
+          <span class="detail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 9 16l10-10"/></svg></span>
+          <h3>Ready to share</h3>
+          <p>The downloaded PDF prompts for your password in compatible readers.</p>
+        </article>
+      </section>
+
+      <aside class="note">
+        <strong>Before you rely on the protected copy:</strong> open the downloaded PDF and confirm the password works. Encryption rewrites the document structure, so existing digital signatures may no longer validate. There is no password recovery if you forget it.
+      </aside>
+    </main>
+
+    <footer>
+      <span>PDF Lock</span>
+      <span>Files and passwords are processed locally in your browser.</span>
+    </footer>
+  </div>
+</body>
+</html>
